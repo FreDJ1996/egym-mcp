@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "egym-mcp"
+version = "0.1.0"
+description = "Unofficial MCP server for the EGYM Fitness app"
+readme = "README.md"
+license = { text = "GPL-3.0-only" }
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=2.3",
+    "python-dotenv",
+    # Replace with upstream once its personal-plan methods are merged.
+    "python-egym @ git+https://github.com/FreDJ1996/python-egym.git@feature/personal-plans",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+egym-mcp = "egym_mcp.server:main"
+
+[tool.setuptools]
+packages = ["egym_mcp"]

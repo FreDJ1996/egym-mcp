@@ -1,0 +1,11 @@
+.env
+.mcp.json
+.venv/
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+training_notes.md
+exercise_catalog.json
+/coach/

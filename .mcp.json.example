@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "egym": {
+      "command": "/absolute/path/to/egym-mcp/.venv/bin/egym-mcp"
+    }
+  }
+}
