@@ -120,6 +120,41 @@ def get_workouts(start_date: str, end_date: str) -> str:
     return _out(_egym("get_workouts", _date(start_date), _date(end_date)))
 
 
+def _with_workout_end(check_ins: list, workouts: list) -> list:
+    """Adds the end of the day's last workout and the minutes from check-in to it (both are local times)."""
+    ends = {}
+    for workout in workouts:
+        completed = workout.get("completedAt") or ""
+        ends[completed[:10]] = max(ends.get(completed[:10], ""), completed)
+    result = []
+    for check_in in check_ins:
+        entry = {
+            "checkIn": check_in["checkInDate"],
+            "gym": check_in.get("gymLocationName"),
+            "durationMs": check_in.get("duration"),
+        }
+        end = ends.get(check_in["checkInDate"][:10])
+        if end:
+            minutes = datetime.datetime.fromisoformat(end) - datetime.datetime.fromisoformat(check_in["checkInDate"])
+            entry["workoutCompletedAt"] = end[:19]
+            entry["minutesToWorkoutEnd"] = round(minutes.total_seconds() / 60)
+        result.append(entry)
+    return result
+
+
+@mcp.tool()
+def get_check_ins(days: int = 30) -> str:
+    """Gym check-ins (turnstile) of the last `days` days, oldest first, with gym and local check-in time.
+
+    Shows every gym visit, also days with only EGYM circuit training that have no workout entry.
+    If a workout was completed in the app that day, workoutCompletedAt and minutesToWorkoutEnd give the time from
+    check-in to the end of the workout; the app logs the end when the user finishes the workout, which can be later
+    than the last set. durationMs (check-out) is only set if the gym reports check-outs.
+    """
+    start, end = _today() - datetime.timedelta(days=days - 1), _today()
+    return _out(_with_workout_end(_egym("get_check_ins", start, end), _egym("get_workouts", start, end)))
+
+
 @mcp.tool()
 def get_strength_status() -> str:
     """Current EGYM maximum strength per machine/exercise (activityId for get_strength_history)."""
@@ -142,6 +177,44 @@ def get_bio_age() -> str:
 def get_bio_age_history(period: str = "month", shift: int = 0) -> str:
     """Bio age per month or year (period: 'month' | 'year'; shift: periods back, 0 = current)."""
     return _out(_egym("get_bio_age_summary", period, shift))
+
+
+def _flexibility_angles(latest: list, history: list) -> list:
+    """Per flexibility angle (…_DEGREE): latest value, EGYM's rating and the history of all measurements."""
+    histories = {entry["type"]: entry.get("history") or [] for entry in history}
+    return [
+        {
+            "type": metric["type"],
+            "degree": round(metric["value"], 1),
+            "rating": metric.get("valueInterpretation"),
+            "measuredAt": metric.get("createdAt"),
+            "history": [
+                {"date": item["date"], "degree": round(item["value"], 1)} for item in histories.get(metric["type"], [])
+            ],
+        }
+        for metric in sorted(latest, key=lambda m: m["type"])
+        if metric["type"].endswith("_DEGREE")
+    ]
+
+
+@mcp.tool()
+def get_flexibility(days: int = 365) -> str:
+    """Flexibility angles in degrees from the EGYM flexibility measurement (hip and hamstring extension, chest,
+    torso and neck lateral flexion, left/right), each with EGYM's rating and the history over `days` days."""
+    latest = _egym("get_latest_flexibility_metrics")
+    types = sorted({m["type"] for m in latest if m["type"].endswith("_DEGREE")})
+    if not types:
+        return "(no flexibility measurement yet)"
+    start = _today() - datetime.timedelta(days=days)
+    history = _egym("get_flexibility_history", types, start, _today(), "ONE_ITEM_PER_DAY")
+    return _out(_flexibility_angles(latest, history))
+
+
+@mcp.tool()
+def get_squat_analysis(days: int = 365) -> str:
+    """Squat scans of the EGYM Fitness Hub over `days` days: squat depth (share), back and shoulder angle (degrees),
+    each with EGYM's rating."""
+    return _out(_egym("get_squat_history", _today() - datetime.timedelta(days=days), _today(), "ONE_ITEM_PER_DAY"))
 
 
 @mcp.tool()

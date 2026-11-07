@@ -51,6 +51,9 @@ Then edit `~/.egym-mcp/.env`, and add the server to your MCP client. `.mcp.json.
 | `get_recent_workouts`, `get_workouts` | Completed workouts with sets, weights and reps |
 | `get_strength_status`, `get_strength_history` | EGYM maximum strength values and their history |
 | `get_bio_age`, `get_bio_age_history` | Bio age and its parts |
+| `get_flexibility` | Flexibility angles in degrees per joint and side, with rating and history |
+| `get_squat_analysis` | Squat scans: depth, back and shoulder angle |
+| `get_check_ins` | Gym visits, with the minutes from check-in to the end of that day's workout |
 | `get_body_composition`, `get_body_metric_history` | Body metrics and their history |
 | `get_muscle_imbalances` | Muscle imbalance analysis |
 | `get_activity_level` | Activity level, points and goal |
@@ -76,7 +79,8 @@ With Claude Code you can use them as a skill that activates by itself: put them 
 
 ## Known gaps
 
-- `get_workouts` only holds workouts entered in the app. Circuit training on EGYM machines does not appear there; use the strength tools for those.
+- `get_workouts` only holds workouts entered in the app. Circuit training on EGYM machines does not appear there; use the strength tools for those. `get_check_ins` shows every gym visit.
+- Check-outs are only recorded if the gym reports them; otherwise `get_check_ins` has no time spent in the gym.
 - `weight: 0.0` on a free-weight set means no weight was entered, not body weight.
 - `get_available_plans` can show the values last trained; `get_plan` shows those stored in the plan.
 

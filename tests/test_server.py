@@ -109,3 +109,33 @@ def test_coach_context_puts_skill_first(monkeypatch, tmp_path):
 def test_coach_context_without_files(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "COACH_DIR", tmp_path)
     assert "no coach files" in server.get_coach_context()
+
+
+def test_check_ins_get_minutes_to_last_workout_of_the_day():
+    check_ins = [
+        {"checkInDate": "2026-11-07T14:45:34", "gymLocationName": "Gym", "duration": None},
+        {"checkInDate": "2026-11-08T10:00:00", "gymLocationName": "Gym", "duration": None},
+    ]
+    workouts = [{"completedAt": "2026-11-07T15:30:00.1"}, {"completedAt": "2026-11-07T15:45:34.2"}]
+    result = server._with_workout_end(check_ins, workouts)
+    assert result[0]["workoutCompletedAt"] == "2026-11-07T15:45:34"
+    assert result[0]["minutesToWorkoutEnd"] == 60
+    assert "minutesToWorkoutEnd" not in result[1]
+
+
+def test_flexibility_keeps_only_degrees_with_history():
+    latest = [
+        {"type": "HIP_EXTENSION_LEFT_DEGREE", "value": 26.3985, "valueInterpretation": "TOO_LOW", "createdAt": "x"},
+        {"type": "HIP_EXTENSION_LEFT_NORMALIZED", "value": 0.4},
+    ]
+    history = [{"type": "HIP_EXTENSION_LEFT_DEGREE", "history": [{"value": 24.04, "date": "2026-09-11"}]}]
+    result = server._flexibility_angles(latest, history)
+    assert result == [
+        {
+            "type": "HIP_EXTENSION_LEFT_DEGREE",
+            "degree": 26.4,
+            "rating": "TOO_LOW",
+            "measuredAt": "x",
+            "history": [{"date": "2026-09-11", "degree": 24.0}],
+        }
+    ]
