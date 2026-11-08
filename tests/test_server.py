@@ -113,14 +113,20 @@ def test_coach_context_without_files(monkeypatch, tmp_path):
 
 def test_check_ins_get_minutes_to_last_workout_of_the_day():
     check_ins = [
-        {"checkInDate": "2026-11-07T14:45:34", "gymLocationName": "Gym", "duration": None},
-        {"checkInDate": "2026-11-08T10:00:00", "gymLocationName": "Gym", "duration": None},
+        {"checkInDate": "2026-11-07T13:45:34", "timezone": "Europe/Berlin", "gymLocationName": "Gym", "duration": None},
+        {"checkInDate": "2026-11-08T10:00:00", "timezone": "Europe/Berlin", "gymLocationName": "Gym", "duration": None},
     ]
     workouts = [{"completedAt": "2026-11-07T15:30:00.1"}, {"completedAt": "2026-11-07T15:45:34.2"}]
     result = server._with_workout_end(check_ins, workouts)
+    assert result[0]["checkIn"] == "2026-11-07T14:45:34"
     assert result[0]["workoutCompletedAt"] == "2026-11-07T15:45:34"
     assert result[0]["minutesToWorkoutEnd"] == 60
     assert "minutesToWorkoutEnd" not in result[1]
+
+
+def test_check_ins_are_converted_from_utc_with_summer_time():
+    check_in = {"checkInDate": "2026-09-11T09:50:02", "timezone": "Europe/Berlin"}
+    assert server._local_check_in(check_in) == "2026-09-11T11:50:02"
 
 
 def test_flexibility_keeps_only_degrees_with_history():

@@ -5,6 +5,7 @@ import json
 import os
 import threading
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
@@ -120,6 +121,12 @@ def get_workouts(start_date: str, end_date: str) -> str:
     return _out(_egym("get_workouts", _date(start_date), _date(end_date)))
 
 
+def _local_check_in(check_in: dict) -> str:
+    """Local check-in time; the API labels check-ins with the gym's zone but sends them in UTC."""
+    moment = datetime.datetime.fromisoformat(check_in["checkInDate"]).replace(tzinfo=datetime.timezone.utc)
+    return moment.astimezone(ZoneInfo(check_in["timezone"])).replace(tzinfo=None).isoformat()
+
+
 def _with_workout_end(check_ins: list, workouts: list) -> list:
     """Adds the end of the day's last workout and the minutes from check-in to it (both are local times)."""
     ends = {}
@@ -128,14 +135,15 @@ def _with_workout_end(check_ins: list, workouts: list) -> list:
         ends[completed[:10]] = max(ends.get(completed[:10], ""), completed)
     result = []
     for check_in in check_ins:
+        local = _local_check_in(check_in)
         entry = {
-            "checkIn": check_in["checkInDate"],
+            "checkIn": local,
             "gym": check_in.get("gymLocationName"),
             "durationMs": check_in.get("duration"),
         }
-        end = ends.get(check_in["checkInDate"][:10])
+        end = ends.get(local[:10])
         if end:
-            minutes = datetime.datetime.fromisoformat(end) - datetime.datetime.fromisoformat(check_in["checkInDate"])
+            minutes = datetime.datetime.fromisoformat(end) - datetime.datetime.fromisoformat(local)
             entry["workoutCompletedAt"] = end[:19]
             entry["minutesToWorkoutEnd"] = round(minutes.total_seconds() / 60)
         result.append(entry)
